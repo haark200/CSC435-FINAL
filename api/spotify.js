@@ -6,24 +6,39 @@ export default async function handler(req, res) {
     const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
     const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
 
-    // Get access token
-    const authResponse = await fetch('https://accounts.spotify.com/api/token', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': 'Basic ' + Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString('base64')
-        },
-        body: 'grant_type=client_credentials'
-    });
+    try {
+        // Get access token
+        const authResponse = await fetch('https://accounts.spotify.com/api/token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Authorization': 'Basic ' + Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString('base64')
+            },
+            body: 'grant_type=client_credentials'
+        });
 
-    const authData = await authResponse.json();
-    const accessToken = authData.access_token;
+        const authData = await authResponse.json();
+        if (!authData.access_token) {
+            console.error("Spotify Auth Error:", authData);
+            return res.status(500).json({ error: "Failed to retrieve Spotify access token" });
+        }
 
-    // Fetch song from Spotify
-    const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(req.query.q)}&type=track&limit=1`, {
-        headers: { 'Authorization': `Bearer ${accessToken}` }
-    });
+        const accessToken = authData.access_token;
 
-    const data = await response.json();
-    res.status(200).json(data);
+        // Fetch song from Spotify
+        const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(req.query.q)}&type=track&limit=1`, {
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+
+        const data = await response.json();
+        if (!data.tracks || !data.tracks.items || data.tracks.items.length === 0) {
+            console.error("Spotify API Error:", data);
+            return res.status(404).json({ error: "No tracks found" });
+        }
+
+        res.status(200).json(data);
+    } catch (error) {
+        console.error("Spotify API Error:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
 }
