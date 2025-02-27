@@ -1,9 +1,7 @@
-// script.js - Main logic for searching songs and fetching AI recommendations
-
 /**
- * Fetches a Spotify access token.
- * @returns {Promise<string>} The access token.
- */
+    * Fetches Spotify token
+    * @returns {Promise<string>} The access token
+*/
 async function getSpotifyToken() {
     const response = await fetch('https://accounts.spotify.com/api/token', {
         method: 'POST',
@@ -18,10 +16,10 @@ async function getSpotifyToken() {
 }
 
 /**
- * Searches for a song using the Spotify API.
- * @param {string} query - The song name to search for.
- * @returns {Promise<object|null>} The song data or null if not found.
- */
+    * Searches for a song using the Spotify API
+    * @param {string} query - The song name
+    * @returns {Promise<object|null>} The song data
+*/
 async function searchSong(query) {
     const token = await getSpotifyToken();
     const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=1`, {
@@ -38,11 +36,11 @@ async function searchSong(query) {
 }
 
 /**
- * Retrieves the genre of an artist from the Spotify API.
- * @param {string} artistId - The artist's Spotify ID.
- * @param {string} token - The Spotify access token.
- * @returns {Promise<string>} The genre of the artist or 'Unknown' if not available.
- */
+    * Retrieves the genre of an artist from the Spotify API
+    * @param {string} artistId - The artist's Spotify ID
+    * @param {string} token - The Spotify access token
+    * @returns {Promise<string>} The genre of the artist
+*/
 async function getArtistGenre(artistId, token) {
     if (!artistId) {
         return "Unknown";
@@ -55,11 +53,11 @@ async function getArtistGenre(artistId, token) {
 }
 
 /**
- * Fetches AI-generated song recommendations based on a song title.
- * @param {string} songTitle - The song title for recommendations.
- * @param {string} artist - The artist of the original song.
- * @returns {Promise<string[]>} A list of recommended songs.
- */
+    * Fetches AI-generated song recommendations based on a song title
+    * @param {string} songTitle - The song title
+    * @param {string} artist - The artist
+    * @returns {Promise<string[]>} A list of recommended songs
+*/
 async function getAIMusicRecommendations(songTitle, artist) {
     document.getElementById('recommendations').innerHTML = '<p>Loading recommendations...</p>';
 
@@ -77,8 +75,8 @@ async function getAIMusicRecommendations(songTitle, artist) {
 }
 
 /**
- * Handles the search button click event.
- */
+    * Handles the search button listener
+*/
 document.getElementById('search-btn').addEventListener('click', async () => {
     const query = document.getElementById('search-input').value;
     const song = await searchSong(query);
