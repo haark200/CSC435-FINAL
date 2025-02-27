@@ -6,3 +6,5 @@
 - It also was used by scrubbing user input, allowing only alphanumerical inputs (For protection from possible injections)
 - Website: https://csc-435-final.vercel.app/
 - Video walkthrough: https://youtu.be/PiUx--H9h0I
+# I was running into a simple issue of the AI response not loading in my video
+# It was simply just that my original API key for OpenAI was typed wrong in Vercel, now working as can be tested on link above
