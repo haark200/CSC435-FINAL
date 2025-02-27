@@ -4,16 +4,37 @@
     * @returns {Promise<object|null>} The song data
 */
 async function searchSong(query) {
-    const response = await fetch(`/api/spotify?q=${encodeURIComponent(query)}`);
-    const data = await response.json();
-    
-    if (data.tracks.items.length > 0) {
+    try {
+        const response = await fetch(`/api/spotify?q=${encodeURIComponent(query)}`);
+        
+        if (response.status === 401) {
+            console.error("Unauthorized: Invalid or expired token.");
+            document.getElementById('song-info').innerHTML = '<p>Authorization error. Please refresh and try again.</p>';
+            return null;
+        }
+
+        if (!response.ok) {
+            console.error("Spotify API Error:", await response.json());
+            document.getElementById('song-info').innerHTML = '<p>Failed to fetch song. Try again later.</p>';
+            return null;
+        }
+
+        const data = await response.json();
+        if (!data.tracks || !data.tracks.items || data.tracks.items.length === 0) {
+            document.getElementById('song-info').innerHTML = '<p>No song found.</p>';
+            return null;
+        }
+
         const track = data.tracks.items[0];
-        const genre = await getArtistGenre(track.artists[0].id);
+        const genre = await getArtistGenre(track.artists[0]?.id);
         return { ...track, genre };
+    } catch (error) {
+        console.error("Error searching for song:", error);
+        document.getElementById('song-info').innerHTML = '<p>Error fetching song data.</p>';
+        return null;
     }
-    return null;
 }
+
 
 /**
     * Retrieves the genre of an artist from the Spotify API
