@@ -1,58 +1,65 @@
+// script.js - Main logic for searching songs and fetching AI recommendations
+
 /**
-    * Searches for a song using Spotify API
-    * @param {string} query - The song name to search for
-    * @returns {Promise<object|null>} The song data
-*/
+ * Fetches a Spotify access token.
+ * @returns {Promise<string>} The access token.
+ */
+async function getSpotifyToken() {
+    const response = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': 'Basic ' + btoa(SPOTIFY_CLIENT_ID + ':' + SPOTIFY_CLIENT_SECRET)
+        },
+        body: 'grant_type=client_credentials'
+    });
+    const data = await response.json();
+    return data.access_token;
+}
+
+/**
+ * Searches for a song using the Spotify API.
+ * @param {string} query - The song name to search for.
+ * @returns {Promise<object|null>} The song data or null if not found.
+ */
 async function searchSong(query) {
-    try {
-        const response = await fetch(`/api/spotify?q=${encodeURIComponent(query)}`);
-        
-        if (response.status === 401) {
-            console.error("Unauthorized: Invalid or expired token.");
-            document.getElementById('song-info').innerHTML = '<p>Authorization error. Please refresh and try again.</p>';
-            return null;
-        }
-
-        if (!response.ok) {
-            console.error("Spotify API Error:", await response.json());
-            document.getElementById('song-info').innerHTML = '<p>Failed to fetch song. Try again later.</p>';
-            return null;
-        }
-
-        const data = await response.json();
-        if (!data.tracks || !data.tracks.items || data.tracks.items.length === 0) {
-            document.getElementById('song-info').innerHTML = '<p>No song found.</p>';
-            return null;
-        }
-
-        const track = data.tracks.items[0];
-        const genre = await getArtistGenre(track.artists[0]?.id);
-        return { ...track, genre };
-    } catch (error) {
-        console.error("Error searching for song:", error);
-        document.getElementById('song-info').innerHTML = '<p>Error fetching song data.</p>';
+    const token = await getSpotifyToken();
+    const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=1`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await response.json();
+    if (!data.tracks || !data.tracks.items || data.tracks.items.length === 0) {
+        console.error("No tracks found:", data);
         return null;
     }
+    const track = data.tracks.items[0];
+    const genre = await getArtistGenre(track.artists[0]?.id, token);
+    return { ...track, genre };
 }
 
-
 /**
-    * Retrieves the genre of an artist from the Spotify API
-    * @param {string} artistId - The artist's Spotify ID
-    * @returns {Promise<string>} The genre of the artist
-*/
-async function getArtistGenre(artistId) {
-    const response = await fetch(`https://api.spotify.com/v1/artists/${artistId}`);
+ * Retrieves the genre of an artist from the Spotify API.
+ * @param {string} artistId - The artist's Spotify ID.
+ * @param {string} token - The Spotify access token.
+ * @returns {Promise<string>} The genre of the artist or 'Unknown' if not available.
+ */
+async function getArtistGenre(artistId, token) {
+    if (!artistId) {
+        return "Unknown";
+    }
+    const response = await fetch(`https://api.spotify.com/v1/artists/${artistId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
     const data = await response.json();
-    return data.genres.length > 0 ? data.genres[0] : 'Unknown';
+    return data.genres?.length > 0 ? data.genres[0] : "Unknown";
 }
 
 /**
-    * Fetches AI-generated song recommendations based on selected song
-    * @param {string} songTitle - The song title
-    * @param {string} artist - The artist
-    * @returns {Promise<void>} Updates the UI with recommended songs
-*/
+ * Fetches AI-generated song recommendations based on a song title.
+ * @param {string} songTitle - The song title for recommendations.
+ * @param {string} artist - The artist of the original song.
+ * @returns {Promise<string[]>} A list of recommended songs.
+ */
 async function getAIMusicRecommendations(songTitle, artist) {
     document.getElementById('recommendations').innerHTML = '<p>Loading recommendations...</p>';
 
@@ -70,8 +77,8 @@ async function getAIMusicRecommendations(songTitle, artist) {
 }
 
 /**
-    * Search button event handler
-*/
+ * Handles the search button click event.
+ */
 document.getElementById('search-btn').addEventListener('click', async () => {
     const query = document.getElementById('search-input').value;
     const song = await searchSong(query);
